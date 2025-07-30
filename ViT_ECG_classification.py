@@ -118,13 +118,45 @@ model_name_or_path = "google/vit-base-patch16-224-in21k"
 feature_extractor = AutoFeatureExtractor.from_pretrained(model_name_or_path)
 
 train_transforms = A.Compose([
-    A.RandomRotate90(),
+    # Geometric transforms
+    A.RandomRotate90(p=0.3),
     A.HorizontalFlip(p=0.5),
-    A.RandomBrightnessContrast(p=0.2),
+    A.Rotate(limit=15, p=0.3),
+    A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.1, rotate_limit=5, p=0.3),
+    
+    # Color/Intensity transforms
+    A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.4),
+    A.RandomGamma(gamma_limit=(80, 120), p=0.3),
+    A.CLAHE(clip_limit=2.0, p=0.2),
+    A.HueSaturationValue(hue_shift_limit=10, sat_shift_limit=15, val_shift_limit=10, p=0.2),
+    
+    # Noise and blur
+    A.OneOf([
+        A.GaussNoise(var_limit=(10.0, 30.0)),
+        A.ISONoise(color_shift=(0.01, 0.03), intensity=(0.1, 0.3)),
+    ], p=0.2),
+    
+    A.OneOf([
+        A.GaussianBlur(blur_limit=(1, 3)),
+        A.MotionBlur(blur_limit=3),
+    ], p=0.1),
+    
+    # Distortions
+    A.OneOf([
+        A.GridDistortion(num_steps=5, distort_limit=0.1),
+        A.OpticalDistortion(distort_limit=0.1, shift_limit=0.05),
+        A.ElasticTransform(alpha=1, sigma=50),
+    ], p=0.2),
+    
+    # Cutout
+    A.CoarseDropout(max_holes=3, max_height=16, max_width=16, p=0.1),
+    
+    # Note: Normalization is handled by the feature_extractor
 ])
 
 val_transforms = A.Compose([
-    # Add any validation transforms here if needed
+    # Validation should typically use minimal or no augmentation
+    # to get consistent evaluation results
 ])
 
 def transform(example_batch):
@@ -191,7 +223,7 @@ training_args = TrainingArguments(
     
     # GPU Optimization settings
     fp16=True,                       # Use mixed precision training (faster + less memory)
-    tf32=True,                       # Use TensorFloat-32 on Ampere GPUs
+    tf32=True,                     # Use TensorFloat-32 on Ampere GPUs (NVIDIA only)
     dataloader_num_workers=min(8, os.cpu_count()),  # Optimal number of workers
     gradient_checkpointing=True,     # Trade compute for memory (allows larger batch sizes)
     gradient_accumulation_steps=1,   # Accumulate gradients
@@ -417,9 +449,9 @@ def test_onnx_model(onnx_path, image_path):
         print("❌ ONNX Runtime not installed. Install with: pip install onnxruntime")
 
 # Uncomment to export and test ONNX model
-# onnx_path = export_to_onnx()
-# if onnx_path:
-#     test_onnx_model(onnx_path, "path_to_your_test_image.jpg")
+onnx_path = export_to_onnx()
+if onnx_path:
+    test_onnx_model(onnx_path, "path_to_your_test_image.jpg")
 
 print("Training completed! Check the following outputs:")
 print(f"- Model saved in: {model_path}")
