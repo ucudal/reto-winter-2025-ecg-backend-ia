@@ -11,9 +11,10 @@ from eval_model   import build_test_dataset, evaluate_model
 
 def main():
     # ——— Parámetros ———
-    MONGO_URI         = "mongodb://root:hK43CrNUq1@mongodb.reto-ucu.net:50005/?authSource=admin"
-    DB_NAME           = "admin"
-    COLL_NAME         = "ecg_collection"
+    # 1) Cargar desde environment variables
+    MONGO_URI  = os.environ["MONGO_URI"]
+    DB_NAME    = os.environ.get("DB_NAME", "admin")            # con valor por defecto
+    COLL_NAME  = os.environ.get("COLL_NAME", "ecg_collection")
     TEST_IDS_PATH     = "test_ids.json"
     MODEL_OUT_DIR_NEW = "./models/new"
     MODEL_OUT_DIR_CUR = "./models/current"
