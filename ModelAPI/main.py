@@ -108,12 +108,13 @@ def predecir_imagen_jpg_file(file: UploadFile):
 
 
 predictEndpoint = rootEndpoint + "/predict"
-@app.post("/api/v1/predict")
+@app.post("ecg/api/v1/model/predict")
 def predict_endpoint(file: UploadFile = File(...)):
     """
     Recibe una imagen JPG como archivo y retorna la predicción ONNX.
     """
     return predecir_imagen_jpg_file(file)
+
 
 
 
