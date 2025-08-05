@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+minio
+python-dotenv
+pillow
+numpy
+onnxruntime
+torch
+torchvision
+joblib
