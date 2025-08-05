@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: python-ecg
+  labels:
+    name: python-ecg
+    app: ecg-ia-python
