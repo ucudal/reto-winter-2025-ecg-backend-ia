@@ -1,25 +1,18 @@
-
-
-
-
-from fastapi import FastAPI, Query, HTTPException, File, UploadFile
-
+from fastapi import FastAPI, HTTPException, File, UploadFile
 from minio import Minio
-import joblib
 import os
 from dotenv import load_dotenv
-import base64
 from io import BytesIO
 from PIL import Image
-import numpy as np
+from numpy import exp, argmax
 import onnxruntime as ort
-from torchvision import transforms
+from torchvision.transforms import Compose, Resize, ToTensor, Normalize
 
 load_dotenv()
 
 app = FastAPI()
 
-rootEndpoint = "/api/v1"
+rootEndpoint = "ecg/api/v1/model"
 
 
 # Configuración de MinIO desde .env
@@ -76,10 +69,10 @@ def predecir_imagen_jpg_file(file: UploadFile):
         if image.format not in ["JPEG", "JPG"]:
             raise HTTPException(status_code=400, detail="Formato de imagen no soportado. Solo JPG/JPEG.")
         image = image.convert("RGB")
-        transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+        transform = Compose([
+            Resize((224, 224)),
+            ToTensor(),
+            Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
         ])
         image = transform(image)
         image = image.unsqueeze(0).numpy()
@@ -91,7 +84,7 @@ def predecir_imagen_jpg_file(file: UploadFile):
         inputs = {ort_session.get_inputs()[0].name: image}
         outputs = ort_session.run(None, inputs)
         print(f"outputs: {outputs}")
-        probs = np.exp(outputs[0]) / np.exp(outputs[0]).sum()
+        probs = exp(outputs[0]) / exp(outputs[0]).sum()
         probs = probs[0].tolist()
         # Devolver por cada clase la probabilidad como lista de dicts
         print(f"Probabilidades len: {len(probs)}")
@@ -107,14 +100,12 @@ def predecir_imagen_jpg_file(file: UploadFile):
         raise HTTPException(status_code=400, detail="Error procesando la imagen o el modelo: " + str(e))
 
 
-predictEndpoint = rootEndpoint + "/predict"
-@app.post("ecg/api/v1/model/predict")
+@app.post("/ecg/api/v1/model/predict")
 def predict_endpoint(file: UploadFile = File(...)):
     """
     Recibe una imagen JPG como archivo y retorna la predicción ONNX.
     """
     return predecir_imagen_jpg_file(file)
-
 
 
 
