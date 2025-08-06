@@ -7,7 +7,7 @@ on:
   
 env:
   REGISTRY: crretoxmas2024.azurecr.io
-  IMAGE_NAME: pyton-ia-ecg
+  IMAGE_NAME: python-ia-ecg
 
 jobs:
   build-and-push:
