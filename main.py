@@ -3,12 +3,24 @@ from pydantic import BaseModel
 from typing import Dict, Any
 import asyncio
 import traceback
+import logging
+import sys
 
 app = FastAPI(
     title="ECG IA Training API",
     description="API for training Vision Transformer models on ECG data",
     version="1.0.0"
 )
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # Pydantic model for the training request
 class TrainingRequest(BaseModel):
@@ -45,20 +57,34 @@ async def start_full_retrain(request: TrainingRequest = None):
         TrainingResponse indicating if training was started successfully (not waiting for completion)
     """
     try:
+        logger.info("🚀 Starting full retrain pipeline...")
+        
         # Import the main pipeline function
         from pipeline import main
+        
+        # Create a wrapper function that adds logging
+        def pipeline_wrapper():
+            try:
+                logger.info("📥 Pipeline execution started in background thread")
+                main()
+                logger.info("✅ Pipeline execution completed successfully")
+            except Exception as e:
+                logger.error(f"❌ Pipeline execution failed: {str(e)}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
         
         # Start the training pipeline in a thread pool without waiting for completion
         # For production, consider using Celery or similar for background tasks
         loop = asyncio.get_event_loop()
-        loop.run_in_executor(None, main)
+        loop.run_in_executor(None, pipeline_wrapper)
         
+        logger.info("🔄 Training pipeline started successfully in background")
         return TrainingResponse(
             success=True,
             message="Training pipeline started successfully"
         )
         
     except ImportError as e:
+        logger.error(f"❌ Pipeline module not found: {str(e)}")
         return TrainingResponse(
             success=False,
             message="Pipeline module not found",
@@ -66,6 +92,8 @@ async def start_full_retrain(request: TrainingRequest = None):
         )
     except Exception as e:
         error_traceback = traceback.format_exc()
+        logger.error(f"❌ Failed to start training pipeline: {str(e)}")
+        logger.error(f"Traceback: {error_traceback}")
         return TrainingResponse(
             success=False,
             message="Failed to start training pipeline",
@@ -124,4 +152,6 @@ async def get_training_log(log_filename: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8002)
+    logger.info("🚀 Starting ECG IA Training API...")
+    logger.info("🌐 Server will be available at: http://localhost:8002")
+    uvicorn.run(app, host="0.0.0.0", port=8002, log_level="info")
