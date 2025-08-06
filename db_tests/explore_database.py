@@ -1,7 +1,7 @@
 # explore_database.py - Script para explorar tu base de datos MongoDB
 
 import asyncio
-from db_tests.db_conn import (
+from db_conn import (
     get_all_collections,
     get_collection_stats,
     explore_collection_structure,
@@ -118,7 +118,7 @@ async def quick_overview():
             await get_collection_stats(coll_name)
             
             # Mostrar un documento de ejemplo si existe
-            from db_tests.db_conn import db
+            from db_conn import db
             target_collection = db[coll_name]
             sample = await target_collection.find_one()
             if sample:

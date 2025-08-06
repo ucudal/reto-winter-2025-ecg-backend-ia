@@ -11,20 +11,49 @@ from sklearn.model_selection import train_test_split
 def load_data_from_mongo(
     mongo_uri: str,
     db_name: str,
-    collection_name: str
+    collection_name: str,
+    output_dir: str = "data/images"
 ) -> List[Dict]:
-    """Descarga docs de Mongo y decodifica image_base64→np.array."""
+    """Descarga docs de Mongo y guarda imágenes en archivos."""
     client = MongoClient(mongo_uri)
+    print("1")
     coll = client[db_name][collection_name]
-    raw = list(coll.find({}, {"_id":1, "image_base64":1, "label":1}))
+    print("2")
+    
+    # Crear directorio si no existe
+    os.makedirs(output_dir, exist_ok=True)
+    print("3")
+    
     out = []
-    for doc in raw:
-        img = Image.open(io.BytesIO(base64.b64decode(doc["image_base64"])))
-        out.append({
-            "_id":    doc["_id"],
-            "image":  np.array(img.convert("RGB")),
-            "label":  int(doc["label"])
-        })
+    # Usar cursor para procesar documentos uno por uno sin cargar todo en memoria
+    cursor = coll.find({}, {"_id":1, "image_base64":1, "label":1})
+    print("4")
+    
+    for doc in cursor:
+        print(f"Processing doc with _id: {doc['_id']}")
+        try:
+            # Decodificar y procesar imagen individualmente
+            img = Image.open(io.BytesIO(base64.b64decode(doc["image_base64"])))
+            
+            # Guardar imagen en archivo
+            img_path = os.path.join(output_dir, f"{doc['_id']}.jpg")
+            img.convert("RGB").save(img_path)
+            
+            out.append({
+                "_id":    doc["_id"],
+                "image_path": img_path,
+                "label":  int(doc.get("label", -1)) 
+            })
+            
+            # Liberar memoria explícitamente
+            img.close()
+            del img
+            
+        except Exception as e:
+            print(f"Error processing doc {doc['_id']}: {e}")
+            continue
+    
+    client.close()
     return out
 
 def get_splits_fixed(
@@ -39,7 +68,7 @@ def get_splits_fixed(
     - Test IDs se persisten en test_ids_path.  
     - Devuelve train_docs, val_docs, test_docs.
     """
-    ids = [d["_id"] for d in docs]
+    ids = [str(d["_id"]) for d in docs]
     labels = [d["label"] for d in docs]
 
     # primero cargo los test_ids
