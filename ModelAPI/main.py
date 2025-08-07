@@ -88,10 +88,19 @@ def predecir_imagen_jpg_file(file: UploadFile):
         probs = probs[0].tolist()
         # Devolver por cada clase la probabilidad como lista de dicts
         print(f"Probabilidades len: {len(probs)}")
+        CLASS_NAMES = [
+            "Normal",
+            "Myocardial Infarction",
+            "History of MI",
+            "Abnormal Heartbeat",
+            "Left Ventricular Hypertrophy",
+            "Left Anterior Fascicular Block",
+        ]
+        
         clases = []
         for i, prob in enumerate(probs):
-            clases.append({"clase": i, "probabilidad": prob})
-
+            clases.append({"name": CLASS_NAMES[i], "probability": prob})
+        
         return clases
         
     except HTTPException:
@@ -105,7 +114,11 @@ def predict_endpoint(file: UploadFile = File(...)):
     """
     Recibe una imagen JPG como archivo y retorna la predicción ONNX.
     """
-    return predecir_imagen_jpg_file(file)
+    clases = predecir_imagen_jpg_file(file)
+    return {
+        "predictions": clases,
+        "heart_rate": None
+    }
 
 
 
