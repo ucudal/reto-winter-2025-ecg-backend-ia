@@ -1,0 +1,24 @@
+apiVersion: apisix.apache.org/v2
+kind: ApisixRoute
+metadata:
+  name: python-ecg-route
+  namespace: python-ecg
+spec:
+  http:
+  - name: ecg-ia-python-route
+    match:
+      hosts:
+      - ecg-ia-python.reto-ucu.net
+      paths:
+      - /*
+    backends:
+    - serviceName: python-ecg-service
+      servicePort: 80
+    plugins:
+    - name: cors
+      enable: true
+      config:
+        allow_origins: "*"
+        allow_methods: "GET,POST,PUT,DELETE,OPTIONS,PATCH"
+        allow_headers: "*"
+        allow_credentials: false
