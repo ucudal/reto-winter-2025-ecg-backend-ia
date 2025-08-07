@@ -4,9 +4,8 @@ import os
 from dotenv import load_dotenv
 from io import BytesIO
 from PIL import Image
-from numpy import exp, argmax
+import numpy as np
 import onnxruntime as ort
-from torchvision.transforms import Compose, Resize, ToTensor, Normalize
 
 load_dotenv()
 
@@ -69,13 +68,11 @@ def predecir_imagen_jpg_file(file: UploadFile):
         if image.format not in ["JPEG", "JPG"]:
             raise HTTPException(status_code=400, detail="Formato de imagen no soportado. Solo JPG/JPEG.")
         image = image.convert("RGB")
-        transform = Compose([
-            Resize((224, 224)),
-            ToTensor(),
-            Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-        ])
-        image = transform(image)
-        image = image.unsqueeze(0).numpy()
+        image = image.resize((224, 224))  # Redimensionar
+        image = np.array(image).astype(np.float32) / 255.0  # Normalizar a [0,1]
+        image = (image - 0.5) / 0.5  # Normalizar a [-1, 1]
+        image = np.transpose(image, (2, 0, 1))  # Canal primero
+        image = np.expand_dims(image, axis=0) 
 
 
         descargar_modelo()
@@ -84,7 +81,7 @@ def predecir_imagen_jpg_file(file: UploadFile):
         inputs = {ort_session.get_inputs()[0].name: image}
         outputs = ort_session.run(None, inputs)
         print(f"outputs: {outputs}")
-        probs = exp(outputs[0]) / exp(outputs[0]).sum()
+        probs = np.exp(outputs[0]) / np.exp(outputs[0]).sum()
         probs = probs[0].tolist()
         # Devolver por cada clase la probabilidad como lista de dicts
         print(f"Probabilidades len: {len(probs)}")
@@ -109,6 +106,7 @@ def predecir_imagen_jpg_file(file: UploadFile):
         raise HTTPException(status_code=400, detail="Error procesando la imagen o el modelo: " + str(e))
 
 
+predictEndpoint = rootEndpoint + "/predict"
 @app.post("/ecg/api/v1/model/predict")
 def predict_endpoint(file: UploadFile = File(...)):
     """

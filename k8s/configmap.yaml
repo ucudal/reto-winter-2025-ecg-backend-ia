@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: python-ecg-config
+  namespace: python-ecg
+  labels:
+    app: ecg-ia-python
+data:
+  
+  # variables de entorno
+  MINIO_ENDPOINT: "minio.reto-ucu.net:443"
+  MINIO_ACCESS_KEY: "FW4XuWBuJ1PdmrKI3puk"
+  MINIO_SECRET_KEY: "s54kSsfpY7q96bGZ0J6hnMzeow4h153rfXcMD3nT"
+  MINIO_BUCKET: "ecgbucket"
+  MINIO_MODEL_OBJECT: "vit_model.onnx"
+  LOCAL_MODEL_PATH: "vit_model.onnx"

@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: python-ecg
+
+resources:
+- namespace.yaml
+- configmap.yaml
+- deployment.yaml
+- service.yaml
+- apisixroute.yaml
+- hpa.yaml
+
+commonLabels:
+  app: ecg-ia-python
+  version: v1.0.0
