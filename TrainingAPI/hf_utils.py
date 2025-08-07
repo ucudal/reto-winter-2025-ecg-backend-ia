@@ -14,6 +14,7 @@ def make_ds(docs):
     labels = []
     for d in docs:
         img = Image.open(d["image"])
+        # img = Image.open(d["image"])
         images.append(img)
         labels.append(d["label"])
     

@@ -5,3 +5,5 @@
 **/models/
 **/db_tests/
 **/aux_script.py
+**/test_upload.py
+.env

@@ -1,7 +1,8 @@
 # BY CHATGPT 
 
 import os
-#import boto3
+from dotenv import load_dotenv
+load_dotenv()
 import numpy as np
 from PIL import Image
 import albumentations as A
@@ -12,6 +13,40 @@ from train_model  import train_ecg_model
 # from eval_model   import evaluate_model
 from onnx_utils import convert_to_onnx, evaluate_onnx_model
 from hf_utils import build_test_dataset
+from minio import Minio
+from datetime import datetime
+
+def get_minio_client():
+    return Minio(
+        str(os.getenv("MINIO_ENDPOINT")),
+        access_key=str(os.getenv("MINIO_ACCESS_KEY")),
+        secret_key=str(os.getenv("MINIO_SECRET_KEY")),
+        secure=True
+    )
+
+def descargar_modelo_actual_minio(dest_path):
+    client = get_minio_client()
+    bucket = str(os.getenv("MINIO_BUCKET"))
+    objeto = str(os.getenv("MINIO_MODEL_OBJECT"))
+
+    try:
+        client.fget_object(bucket, objeto, dest_path)
+        print(f"✅ Modelo actual descargado desde MinIO a {dest_path}")
+        return True
+    except Exception as e:
+        print(f"⚠️ No se pudo descargar el modelo actual: {e}")
+        return False
+
+def subir_nuevo_modelo_a_minio(source_path):
+    client = get_minio_client()
+    bucket = str(os.getenv("MINIO_BUCKET"))
+    objeto = str(os.getenv("MINIO_MODEL_OBJECT"))
+
+    if not client.bucket_exists(bucket):
+        client.make_bucket(bucket)
+
+    client.fput_object(bucket, objeto, source_path)
+    print(f"✅ Nuevo modelo subido a MinIO como {objeto}")
 
 def main():
     # ——— Parámetros ———
@@ -66,16 +101,24 @@ def main():
     print("✅ Métricas nuevo modelo (ONNX):", new_metrics)
 
     # 7) Evaluar modelo actual --> hay que trar los datos del bucket 
-    # current_model = AutoModelForImageClassification.from_pretrained(MODEL_OUT_DIR_CUR)
-    # cur_metrics   = evaluate_onnx_model(current_model, test_ds, extractor, val_tf)
-    cur_metrics = {'eval_accuracy': 0.5078947368421053, 'eval_f1': 0.5517241379310345}
-    print("🔄 Métricas modelo en producción:", cur_metrics)
+    # Descargar modelo actual (si existe)
+    onnx_path_cur = os.path.join(MODEL_OUT_DIR_CUR, "model.onnx")
+    modelo_actual_existe = descargar_modelo_actual_minio(onnx_path_cur)
 
-    # 8) Comparar y deploy al bucket si mejora (falta agregar esta lógica)
+    if modelo_actual_existe:
+        cur_metrics = evaluate_onnx_model(onnx_path_cur, test_ds)
+        print("🔄 Métricas modelo en producción:", cur_metrics)
+    else:
+        print("⚠️ No hay modelo actual. Se asumirá accuracy = 0")
+        cur_metrics = {'eval_accuracy': 0.0}
+
+    # Comparar y decidir deploy
     if new_metrics["eval_accuracy"] > cur_metrics["eval_accuracy"]:
-        print("🎉 Nuevo modelo supera al actual. Subiendo a S3…")
+        print("🎉 Nuevo modelo supera al actual. Subiendo a MinIO…")
+        subir_nuevo_modelo_a_minio(onnx_path_new)
     else:
         print("⚠️ Nuevo modelo NO supera al actual. Manteniendo despliegue.")
+
 
 if __name__ == "__main__":
     main()
