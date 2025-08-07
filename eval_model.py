@@ -1,15 +1,7 @@
 from transformers import Trainer
-from hf_utils import make_ds, preprocess, collate_fn
+from hf_utils import collate_fn
 
-def build_test_dataset(test_docs, extractor, val_tf):
-    """
-    Construye un HF Dataset para test:
-      - cast image
-      - apply extractor + val_tf
-    """
-    ds = make_ds(test_docs)
-    return ds.with_transform(lambda b: preprocess(b, val_tf, extractor))
-
+# en desuso, evaluaba el modelo de pytorch y usamos un onnx
 def evaluate_model(model, test_dataset, extractor, val_tf, batch_size: int = 32):
     """
     Evalúa `model` sobre `test_dataset`.

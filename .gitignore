@@ -1,1 +1,7 @@
 **/__pycache__/
+**/data/
+**/eval_testing.py
+**/test.py
+**/models/
+**/db_tests/
+**/aux_script.py

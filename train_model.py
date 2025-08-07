@@ -22,6 +22,8 @@ def train_ecg_model(
     ds_train = make_ds(train_docs)
     ds_val   = make_ds(val_docs)
 
+    model_name = "google/vit-base-patch16-224-in21k"
+    
     # feature extractor + transformaciones
     extractor = AutoFeatureExtractor.from_pretrained(model_name)
     train_tf = A.Compose([
@@ -39,7 +41,6 @@ def train_ecg_model(
     id2lab = {i:str(i) for i in unique}
     lab2id = {str(i):i for i in unique}
 
-    model_name = "google/vit-base-patch16-224-in21k"
     model = AutoModelForImageClassification.from_pretrained(
         model_name,
         num_labels=len(unique),
@@ -53,7 +54,7 @@ def train_ecg_model(
         per_device_train_batch_size=batch_size,
         learning_rate=learning_rate,
         num_train_epochs=num_epochs,
-        evaluation_strategy="epoch",
+        eval_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
         remove_unused_columns=False,

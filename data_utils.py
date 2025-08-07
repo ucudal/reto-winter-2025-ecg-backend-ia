@@ -1,5 +1,3 @@
-import base64
-import io
 import os
 import json
 from typing import List, Dict
@@ -7,6 +5,8 @@ from pymongo import MongoClient
 from PIL import Image
 import numpy as np
 from sklearn.model_selection import train_test_split
+import io
+import base64
 
 def load_data_from_mongo(
     mongo_uri: str,
@@ -16,18 +16,14 @@ def load_data_from_mongo(
 ) -> List[Dict]:
     """Descarga docs de Mongo y guarda imágenes en archivos."""
     client = MongoClient(mongo_uri)
-    print("1")
     coll = client[db_name][collection_name]
-    print("2")
     
     # Crear directorio si no existe
     os.makedirs(output_dir, exist_ok=True)
-    print("3")
     
     out = []
     # Usar cursor para procesar documentos uno por uno sin cargar todo en memoria
     cursor = coll.find({}, {"_id":1, "image_base64":1, "label":1})
-    print("4")
     
     for doc in cursor:
         print(f"Processing doc with _id: {doc['_id']}")
@@ -41,7 +37,7 @@ def load_data_from_mongo(
             
             out.append({
                 "_id":    doc["_id"],
-                "image_path": img_path,
+                "image": img_path,
                 "label":  int(doc.get("label", -1)) 
             })
             
@@ -73,9 +69,10 @@ def get_splits_fixed(
 
     # primero cargo los test_ids
     # si existen, los leo y asigno a test_ids
-    if os.path.exists(test_ids_path):
+    if os.path.exists(test_ids_path):        
         with open(test_ids_path, "r") as f:
             test_ids = set(json.load(f))
+            
     else: # si no existen, los creo y guardo
         _, test_ids = train_test_split(
             ids, test_size=test_size, random_state=seed, stratify=labels
@@ -88,7 +85,7 @@ def get_splits_fixed(
     test_docs = []
     train_val_docs = []
     for d in docs:
-        if d["_id"] in test_ids:
+        if str(d["_id"]) in test_ids:
             test_docs.append(d)
         else:
             train_val_docs.append(d)
