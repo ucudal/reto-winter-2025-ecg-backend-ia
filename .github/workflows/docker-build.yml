@@ -59,4 +59,4 @@ jobs:
       run: |
         export KUBECONFIG=kubeconfig
         kubectl apply -k k8s/
-        kubectl rollout restart deployment nodejs-qubika-deployment -n nodejs-qubika
+        kubectl rollout restart deployment python-ecg-deployment -n python-ecg
